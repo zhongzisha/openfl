@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """You may copy this file as the starting point of your own model."""
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,6 +12,7 @@ import torch.optim as optim
 import tqdm
 
 from .tv_resnet_ae import resnet18
+from .utils import Accuracy_Logger
 from torch.hub import load_state_dict_from_url
 
 from openfl.federated import PyTorchTaskRunner
@@ -42,7 +45,7 @@ class LossFn(nn.Module):
         self.__name__ = 'weighted_ce_loss'
 
     def forward(self, output, target):
-        return F.cross_entropy(input=output, target=target,
+        return F.cross_entropy(input=output['HistoAnno_logits'], target=target,
                                weight=self.weight,
                                ignore_index=2)
 
@@ -68,9 +71,11 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         self._init_optimizer(lr=kwargs.get('lr'))
         self.initialize_tensorkeys_for_functions()
 
+        print('kwargs', kwargs.keys())
+
     def _init_optimizer(self, lr):
         """Initialize the optimizer."""
-        self.optimizer = optim.Adam(self.parameters(), lr=float(lr or 1e-3))
+        self.optimizer = optim.Adam(self.parameters(), lr=float(lr or 1e-4))
 
     def init_network(self,
                      device,
@@ -148,8 +153,14 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         A = F.softmax(A, dim=1)  # B x P
         A = A.repeat(1, 1, L)  # B x P x L
         h = torch.sum(A * feat, dim=1)  # B x P x L * B x P x L --> B x L   2 x 25
-        x = self.classifier(h)
-        return x
+        logits_k = self.classifier(h)
+        Y_hat_k = torch.topk(logits_k, 1, dim=1)[1]
+        Y_prob_k = F.softmax(logits_k, dim=1)
+        results_dict = {'HistoAnno_logits': logits_k,
+                        'HistoAnno_Y_hat': Y_hat_k.squeeze(),
+                        'HistoAnno_Y_prob': Y_prob_k}
+
+        return results_dict
 
     def validate(self, col_name, round_num, input_tensor_dict,
                  use_tqdm=False, **kwargs):
@@ -178,16 +189,68 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         if use_tqdm:
             loader = tqdm.tqdm(loader, desc='validate')
 
+        classification_dict = {
+            # 'stage': ['Stage I', 'Stage II', 'Stage III', 'Stage IV'],
+            # 'subtype': ['LumA', 'LumB', 'Basal', 'HER2E', 'normal-like'],
+            # 'IHC_HER2': ['Negative', 'Positive', 'Other'],
+            'HistoAnno': ['Invasive lobular carcinoma', 'Invasive ductal carcinoma', 'Other'],
+        }
+
+        loggers_dict = {}
+        for k, v in classification_dict.items():
+            loggers_dict[k] = Accuracy_Logger(n_classes=len(v), task_name=k, label_names=v)
+
+        epoch = round_num
+        save_dir = './save/'
+        os.makedirs(save_dir, exist_ok=True)
+
         with torch.no_grad():
             for data, target in loader:
                 samples = target.shape[0]
                 total_samples += samples
                 data, target = (data.to(self.device),
                                 target.to(self.device))
-                output = self(data)
+                results_dict = self(data)
                 # get the index of the max log-probability
-                pred = output.argmax(dim=1)
-                val_score += pred.eq(target).sum().cpu().numpy()
+                for k in classification_dict.keys():
+                    loggers_dict[k].log(results_dict[k + '_Y_hat'], target, results_dict[k + '_Y_prob'])
+
+        losses_dict = {}
+        for name, labels in classification_dict.items():
+            print(20 * '=')
+            print('{} confusion matrix'.format(name))
+            print(loggers_dict[name].get_confusion_matrix())
+
+            for average in ['micro', 'macro', 'weighted']:
+                score = loggers_dict[name].get_f1_score(average=average)
+                losses_dict['{}_f1_{}'.format(name, average)] = score
+                print('f1_score({}) = {}'.format(average, score))
+                # if writer:
+                #     writer.add_scalar('val/{}_f1_{}'.format(name, average), score, epoch)
+
+            for average in ['macro', 'weighted']:
+                auc = loggers_dict[name].get_auc_score(average=average)
+                losses_dict['{}_auc_{}'.format(name, average)] = auc
+                print('auc_score({}) = {}'.format(average, auc))
+                # if writer:
+                #     writer.add_scalar('val/{}_auc_{}'.format(name, average), auc, epoch)
+
+            print('generated ROC curves ...')
+            loggers_dict[name].get_roc_curve(os.path.join(save_dir, 'epoch_{:03}_{}_val_ROC.jpg'.format(epoch, name)))
+
+            print('save data')
+            loggers_dict[name].save_data(os.path.join(save_dir, 'epoch_{:03}_{}_val_data.txt'.format(epoch, name)))
+
+            for j in range(len(labels)):
+                acc, correct, count = loggers_dict[name].get_summary(j)
+                print('task {}, class {}({}): acc {}, correct {}/{}'.format(name, j, classification_dict[name][j], acc,
+                                                                            correct, count))
+
+                losses_dict['{}_{}_acc'.format(name, classification_dict[name][j])] = acc
+                losses_dict['{}_{}_correct'.format(name, classification_dict[name][j])] = correct
+                losses_dict['{}_{}_count'.format(name, classification_dict[name][j])] = count
+                # if writer:
+                #     writer.add_scalar('val/{}_{}_{}_acc'.format(name, j, classification_dict[name][j]), acc, epoch)
 
         origin = col_name
         suffix = 'validate'
@@ -200,7 +263,8 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         #  this pytorch validate function
         output_tensor_dict = {
             TensorKey('acc', origin, round_num, True, tags):
-                np.array(val_score / total_samples)
+                # np.array(val_score / total_samples)
+                losses_dict['HistoAnno_auc_weighted']
         }
 
         # empty list represents metrics that should only be stored locally

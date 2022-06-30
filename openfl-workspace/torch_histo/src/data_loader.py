@@ -529,11 +529,13 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
 
     def get_valid_loader(self, num_batches=None):
         """Return validation dataloader."""
-        return DataLoader(self.valid_dataset, batch_size=self.batch_size)
+        return DataLoader(self.valid_dataset, batch_size=self.batch_size,
+                          num_workers=4)
 
     def get_train_loader(self, num_batches=None):
         """Return train dataloader."""
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True,
+                          num_workers=4)
 
     def get_train_data_size(self):
         """Return size of train dataset."""
