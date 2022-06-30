@@ -42,19 +42,6 @@ assigner :
 
 tasks :
   defaults : plan/defaults/tasks_torch.yaml
-  aggregated_model_validation:
-    function  : validate
-    kwargs    :
-      apply   : global
-      metrics :
-      - dice_coef
-  
-  locally_tuned_model_validation:
-    function  : validate
-    kwargs    :
-      apply   : local
-      metrics :
-      - dice_coef
 
 compression_pipeline :
   defaults : plan/defaults/compression_pipeline.yaml

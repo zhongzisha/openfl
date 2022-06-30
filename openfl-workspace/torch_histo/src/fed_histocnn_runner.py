@@ -38,7 +38,8 @@ def cross_entropy(output, target):
 class LossFn(nn.Module):
     def __init__(self, device):
         super(LossFn, self).__init__()
-        self.weight = torch.FloatTensor([6.2500, 1.6164, 4.5181], device=device)
+        self.weight = torch.FloatTensor([6.2500, 1.6164, 4.5181]).to(device)
+        self.__name__ = 'weighted_ce_loss'
 
     def forward(self, output, target):
         return F.cross_entropy(input=output, target=target,
@@ -49,7 +50,7 @@ class LossFn(nn.Module):
 class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
     """Simple CNN for classification."""
 
-    def __init__(self, device='cuda:0', **kwargs):
+    def __init__(self, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'), **kwargs):
         """Initialize.
 
         Args:
@@ -181,8 +182,8 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
             for data, target in loader:
                 samples = target.shape[0]
                 total_samples += samples
-                data, target = (torch.tensor(data).to(self.device),
-                                torch.tensor(target).to(self.device))
+                data, target = (data.to(self.device),
+                                target.to(self.device))
                 output = self(data)
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1)

@@ -349,7 +349,7 @@ class HistoDataset(Dataset):
             results_dict['debug_num_indices'] = len(indices)
 
         # return results_dict
-        return patches, int(item['PAM50_and_Claudin-low_(CLOW)_Molecular_Subtype'])
+        return patches, int(item['HistoAnno'])
 
     def __getitem_no_cache__(self, index):
 
@@ -478,7 +478,7 @@ class HistoDataset(Dataset):
             results_dict['debug_num_indices'] = len(indices)
 
         # return results_dict
-        return patches, int(item['PAM50_and_Claudin-low_(CLOW)_Molecular_Subtype'])
+        return patches, int(item['HistoAnno'])
 
 
 class PyTorchHistoDataLoader(PyTorchDataLoader):
