@@ -1,0 +1,87 @@
+# Copyright (C) 2020-2021 Intel Corporation
+# Licensed subject to the terms of the separately executed evaluation license agreement between Intel Corporation and you.
+
+aggregator :
+  defaults : plan/defaults/aggregator.yaml
+  template : openfl.component.Aggregator
+  settings :
+    init_state_path : save/torch_histo_init.pbuf
+    best_state_path : save/torch_histo_best.pbuf
+    last_state_path : save/torch_histo_last.pbuf
+    rounds_to_train : 40
+
+collaborator :
+  defaults : plan/defaults/collaborator.yaml
+  template : openfl.component.Collaborator
+  settings :
+    epochs_per_round : 1.0
+    polling_interval : 4
+    delta_updates    : false
+    opt_treatment    : RESET
+
+data_loader :
+  defaults : plan/defaults/data_loader.yaml
+  template : src.data_loader.PyTorchHistoDataLoader
+  settings :
+    collaborator_count : 2
+    data_group_name    : histo
+    batch_size         : 4
+
+task_runner :
+  defaults : plan/defaults/task_runner.yaml
+  template : src.fed_histocnn_runner.PyTorchFederatedHistoCNN
+  settings :
+    label_col_dict:
+      subtype: 'PAM50_and_Claudin-low_(CLOW)_Molecular_Subtype'
+      IHC_HER2: 'IHC_HER2'
+      HistoAnno: 'HistoAnno'
+    classification_dict_all:
+      subtype: [ 'LumA', 'LumB', 'Basal', 'HER2E', 'normal-like' ]
+      IHC_HER2: [ 'Negative', 'Positive', 'Other' ]
+      HistoAnno: [ 'Invasive lobular carcinoma', 'Invasive ductal carcinoma', 'Other' ]
+    classification_loss_weights_dict:
+      subtype: [1.0, 1.0, 1.0, 1.0, 1.0]
+      IHC_HER2: [1.0, 1.0, 1.0]
+      HistoAnno: [6.2500, 1.6164, 4.5181]
+    ignore_index_dict:
+      subtype: -100
+      IHC_HER2: 2
+      HistoAnno: -100
+    regression_list_all: ['Stage', 'MDSC', 'CAF', 'M2', 'Dysfunction', 'CTL']
+    cls_task_keys: 'HistoAnno'
+    reg_task_keys: 'Stage'
+    cls_loss_coeff: '1.0'
+    reg_loss_coeff: '1.0'
+    image_size: 128
+    num_channels: 3
+    fixed_backbone: False
+    norm_type: 'mean_std'
+    backbone: 'resnet18'
+    dropout: 0.25
+    model_name: 'patch'
+    vae_loss_type: 'None'
+    z_dim: 512
+    bce_loss_coeff: 1.0
+    kl_loss_coeff: 1e-4
+    surv_loss_type: 'nll_surv'
+    surv_alpha: 1.0
+    cls_loss_type: 'weighted_ce'
+    focal_gamma: 1.0
+    reg_loss_type: 'mse'
+    regu_loss_type: 'None'
+    accum_iter: 1
+    moe_type: "None"
+    image_mean: [0.485, 0.456, 0.406]
+    image_std: [0.229, 0.224, 0.225]
+
+network :
+  defaults : plan/defaults/network.yaml
+
+assigner :
+  defaults : plan/defaults/assigner.yaml
+
+tasks :
+  defaults : plan/defaults/tasks_torch.yaml
+
+compression_pipeline :
+  defaults : plan/defaults/compression_pipeline.yaml
