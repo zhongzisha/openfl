@@ -8,7 +8,7 @@ aggregator :
     init_state_path : save/torch_histo_init.pbuf
     best_state_path : save/torch_histo_best.pbuf
     last_state_path : save/torch_histo_last.pbuf
-    rounds_to_train : 40
+    rounds_to_train : 400
 
 collaborator :
   defaults : plan/defaults/collaborator.yaml
@@ -38,37 +38,39 @@ task_runner :
     classification_dict_all:
       subtype: [ 'LumA', 'LumB', 'Basal', 'HER2E', 'normal-like' ]
       IHC_HER2: [ 'Negative', 'Positive', 'Other' ]
-      HistoAnno: [ 'Invasive lobular carcinoma', 'Invasive ductal carcinoma', 'Other' ]
+      HistoAnno: [ 'InvasiveLobularCarcinoma', 'InvasiveDuctalCarcinoma', 'Other' ]
     classification_loss_weights_dict:
-      subtype: [1.0, 1.0, 1.0, 1.0, 1.0]
-      IHC_HER2: [1.0, 1.0, 1.0]
+      subtype: [2.0270, 4.6584, 5.6818, 12.9310, 25.8621]
+      IHC_HER2: [1.2058, 6.5789, 53.5714]
       HistoAnno: [6.2500, 1.6164, 4.5181]
     ignore_index_dict:
       subtype: -100
       IHC_HER2: 2
       HistoAnno: -100
     regression_list_all: ['Stage', 'MDSC', 'CAF', 'M2', 'Dysfunction', 'CTL']
-    cls_task_keys: 'HistoAnno'
-    reg_task_keys: 'Stage'
-    cls_loss_coeff: '1.0'
-    reg_loss_coeff: '1.0'
-    image_size: 128
+    image_size: 224
     num_channels: 3
     fixed_backbone: False
     norm_type: 'mean_std'
     backbone: 'resnet18'
     dropout: 0.25
     model_name: 'patch'
+    surv_loss_type: 'nll_surv'
+    surv_loss_coeff: 1.0
+    surv_alpha: 1.0
     vae_loss_type: 'None'
     z_dim: 512
     bce_loss_coeff: 1.0
     kl_loss_coeff: 1e-4
-    surv_loss_type: 'nll_surv'
-    surv_alpha: 1.0
+    cls_task_keys: 'HistoAnno,IHC_HER2,subtype'
     cls_loss_type: 'weighted_ce'
+    cls_loss_coeff: '1.0'
     focal_gamma: 1.0
+    reg_task_keys: 'Stage,MDSC,M2,CAF,CTL,Dysfunction'
     reg_loss_type: 'mse'
+    reg_loss_coeff: '1.0,1.0,1.0,1.0,0.1,1.0'
     regu_loss_type: 'None'
+    regu_loss_coeff: 1e-5
     accum_iter: 1
     moe_type: "None"
     image_mean: [0.485, 0.456, 0.406]

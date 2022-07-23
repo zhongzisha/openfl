@@ -4,7 +4,9 @@ export WORKSPACE_TEMPLATE=torch_histo_mtl
 
 fx workspace create --prefix ${WORKSPACE_PATH} --template ${WORKSPACE_TEMPLATE}
 cd ${WORKSPACE_PATH}
+# copy data to data/all
 fx plan initialize
+
 fx workspace certify
 fx aggregator generate-cert-request --fqdn $FQDN
 fx aggregator certify --fqdn $FQDN --silent
@@ -13,8 +15,7 @@ fx workspace export
 
 
 # on slaves
-fx workspace import --archive WORKSPACE.zip
-
+fx workspace import --archive my_federation.zip
 
 fx collaborator generate-cert-request -n {COL_LABEL}
 

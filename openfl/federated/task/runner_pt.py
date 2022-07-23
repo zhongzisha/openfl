@@ -37,6 +37,7 @@ class PyTorchTaskRunner(nn.Module, TaskRunner):
         """
         super().__init__()
         TaskRunner.__init__(self, **kwargs)
+        self.epoch = None
         if device:
             self.device = device
         else:
@@ -156,6 +157,7 @@ class PyTorchTaskRunner(nn.Module, TaskRunner):
             loader = self.data_loader.get_train_loader()
             if use_tqdm:
                 loader = tqdm.tqdm(loader, desc='train epoch')
+            self.epoch = epoch
             metric = self.train_epoch(loader)
         # Output metric tensors (scalar)
         origin = col_name

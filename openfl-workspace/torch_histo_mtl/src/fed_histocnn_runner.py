@@ -3,7 +3,7 @@
 
 """You may copy this file as the starting point of your own model."""
 import os
-
+from typing import Iterator, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,9 +16,10 @@ from histo_utils import Accuracy_Logger, Regression_Logger
 from histo_losses import VAEUsingDistLoss, NLLSurvLoss, CrossEntropySurvLoss, CoxSurvLoss, FocalLoss
 from torch.hub import load_state_dict_from_url
 from tensorboardX import SummaryWriter
+from torchvision.utils import save_image
 
 from openfl.federated import PyTorchTaskRunner
-from openfl.utilities import TensorKey
+from openfl.utilities import TensorKey, Metric
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -33,9 +34,19 @@ model_urls = {
 }
 
 
-class LossFn(nn.Module):
-    def __init__(self, device, **kwargs):
-        super(LossFn, self).__init__()
+class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
+    """Simple CNN for classification."""
+
+    def __init__(self, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'), **kwargs):
+        """Initialize.
+
+        Args:
+            **kwargs: Additional arguments to pass to the function
+        """
+
+        super().__init__(device=device, **kwargs)
+
+        print('kwargs: ', kwargs.keys())
         self.label_col_dict = kwargs.get('label_col_dict')
         self.classification_dict_all = kwargs.get('classification_dict_all')
         self.classification_loss_weights_dict = kwargs.get('classification_loss_weights_dict')
@@ -68,6 +79,7 @@ class LossFn(nn.Module):
         self.image_mean = kwargs.get('image_mean')
         self.image_std = kwargs.get('image_std')
         self.num_channels = kwargs.get('num_channels')
+        self.accum_iter = kwargs.get('accum_iter')
 
         self.has_surv = self.surv_loss_type != 'None'
         self.has_vae = self.vae_loss_type != 'None'
@@ -92,15 +104,16 @@ class LossFn(nn.Module):
 
         print('classification tasks: ', self.classification_dict)
         print('regression tasks: ', self.regression_list)
+        print('cls_loss_coeff', self.cls_loss_coeff)
+        print('reg_loss_coeff', self.reg_loss_coeff)
+        print('regu_loss_coeff', self.regu_loss_coeff)
 
         if len(self.classification_dict) != len(self.cls_loss_coeff):
             print('inequal classification coefficients!')
-            print('cls_loss_coeff', self.cls_loss_coeff)
             temp_loss_coeff = self.cls_loss_coeff[0]
             self.cls_loss_coeff = [temp_loss_coeff for _ in range(len(self.classification_dict))]
         if len(self.regression_list) != len(self.reg_loss_coeff):
             print('inequal regression coefficients!')
-            print('reg_loss_coeff', self.reg_loss_coeff)
             temp_loss_coeff = self.reg_loss_coeff[0]
             self.reg_loss_coeff = [temp_loss_coeff for _ in range(len(self.regression_list))]
 
@@ -158,123 +171,6 @@ class LossFn(nn.Module):
             self.regu_loss_fn = None
         else:
             self.regu_loss_fn = None
-        self.__name__ = 'histo_mtl_loss'
-
-    def forward(self, results_dict, labeled_batch):
-        losses_dict = {
-            'bce': 0., 'kld': 0.,
-            'surv': 0., 'regu': 0.
-        }
-        for k in self.classification_dict.keys():
-            losses_dict[k] = 0.
-        for k in self.regression_list:
-            losses_dict[k] = 0.
-
-        if self.has_vae:
-            # for autoencoder
-            bce_loss, kl_loss = self.vae_loss_fn(results_dict['patches'], results_dict['x_hat'],
-                                                     results_dict['p'], results_dict['q'])
-            losses_dict['bce'] += bce_loss.item()
-            losses_dict['kld'] += kl_loss.item()
-
-        if self.has_surv:
-            hazards, S, Y_hat = results_dict['hazards'], results_dict['S'], results_dict['Y_hat']
-            surv_loss = self.surv_loss_fn(hazards=hazards, S=S, Y=labeled_batch['label'], c=labeled_batch['c'])
-            losses_dict['surv'] += surv_loss.item()
-
-        classification_losses = {}
-        for k in self.classification_dict.keys():
-            classification_losses[k] = self.cls_loss_fn_dict[k](results_dict[k + '_logits'], labeled_batch[k])
-            losses_dict[k] += classification_losses[k].item()
-            # loggers_dict[k].log(results_dict[k + '_Y_hat'], labeled_batch[k], results_dict[k + '_Y_prob'])
-
-        regression_losses = {}
-        for k in self.regression_list:
-            regression_losses[k] = self.reg_loss_fn_dict[k](results_dict[k + '_logits'], labeled_batch[k])
-            losses_dict[k] += regression_losses[k].item()
-            # reg_loggers_dict[k].log(results_dict[k + '_logits'], labeled_batch[k])
-
-        total_loss = sum([self.cls_loss_coeff[vi] * v for vi, v in enumerate(classification_losses.values())]) + \
-                     sum([self.reg_loss_coeff[vi] * v for vi, v in enumerate(regression_losses.values())])
-
-        if self.has_surv:
-            total_loss += self.surv_loss_coeff * surv_loss
-
-        if self.has_vae:
-            total_loss += self.bce_loss_coeff * bce_loss + self.kl_loss_coeff * kl_loss
-
-        return total_loss
-
-
-class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
-    """Simple CNN for classification."""
-
-    def __init__(self, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'), **kwargs):
-        """Initialize.
-
-        Args:
-            **kwargs: Additional arguments to pass to the function
-        """
-
-        super().__init__(loss_fn=LossFn(device=device, **kwargs), **kwargs)
-
-        print('kwargs: ', kwargs.keys())
-        self.label_col_dict = kwargs.get('label_col_dict')
-        self.classification_dict_all = kwargs.get('classification_dict_all')
-        self.classification_loss_weights_dict = kwargs.get('classification_loss_weights_dict')
-        self.ignore_index_dict = kwargs.get('ignore_index_dict')
-        self.regression_list_all = kwargs.get('regression_list_all')
-        self.cls_task_keys = kwargs.get('cls_task_keys')
-        self.reg_task_keys = kwargs.get('reg_task_keys')
-        self.image_size = kwargs.get('image_size')
-        self.model_name = kwargs.get('model_name')
-        self.backbone = kwargs.get('backbone')
-        self.fixed_backbone = kwargs.get('fixed_backbone')
-        self.dropout = kwargs.get('dropout')
-        self.surv_loss_type = kwargs.get('surv_loss_type')
-        self.surv_loss_coeff = kwargs.get('surv_loss_coeff')
-        self.surv_alpha = kwargs.get('surv_alpha')
-        self.vae_loss_type = kwargs.get('vae_loss_type')
-        self.z_dim = kwargs.get('z_dim')
-        self.bce_loss_coeff = kwargs.get('bce_loss_coeff')
-        self.kl_loss_coeff = kwargs.get('kl_loss_coeff')
-        self.cls_loss_type = kwargs.get('cls_loss_type')
-        self.cls_loss_coeff = kwargs.get('cls_loss_coeff')
-        self.cls_loss_coeff = [float(v) for v in self.cls_loss_coeff.split(',')]
-        self.focal_gamma = kwargs.get('focal_gamma')
-        self.reg_loss_type = kwargs.get('reg_loss_type')
-        self.reg_loss_coeff = kwargs.get('reg_loss_coeff')
-        self.reg_loss_coeff = [float(v) for v in self.reg_loss_coeff.split(',')]
-        self.regu_loss_type = kwargs.get('regu_loss_type')
-        self.regu_loss_coeff = kwargs.get('regu_loss_coeff')
-        self.moe_type = kwargs.get('moe_type')
-        self.image_mean = kwargs.get('image_mean')
-        self.image_std = kwargs.get('image_std')
-        self.num_channels = kwargs.get('num_channels')
-
-        self.has_surv = self.surv_loss_type != 'None'
-        self.has_vae = self.vae_loss_type != 'None'
-        self.has_moe = self.moe_type != 'None'
-
-        if self.cls_task_keys == 'None':
-            self.classification_dict = {}
-        else:
-            cls_task_keys = self.cls_task_keys.split(',')
-            self.classification_dict = {}
-            for cls_task_key in cls_task_keys:
-                self.classification_dict[cls_task_key] = self.classification_dict_all[cls_task_key]
-
-        if self.reg_task_keys == 'None':
-            self.regression_list = []
-        else:
-            reg_task_keys = self.reg_task_keys.split(',')
-            self.regression_list = []
-            for reg_task_key in reg_task_keys:
-                if reg_task_key in self.regression_list_all:
-                    self.regression_list.append(reg_task_key)
-
-        print('classification tasks: ', self.classification_dict)
-        print('regression tasks: ', self.regression_list)
 
         torch.manual_seed(0)
         torch.backends.cudnn.deterministic = True
@@ -415,7 +311,7 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
             hazards, S, Y_hat = None, None, None
 
         results_dict.update({'x_hat': x_hat, 'p': p, 'q': q,
-                        'hazards': hazards, 'S': S, 'Y_hat': Y_hat})
+                             'hazards': hazards, 'S': S, 'Y_hat': Y_hat})
         for k, classifier in self.classifiers.items():
             logits_k = classifier(h)
             Y_hat_k = torch.topk(logits_k, 1, dim=1)[1]
@@ -429,6 +325,216 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
             results_dict.update({k + '_logits': values_k})
 
         return results_dict
+
+    def train_epoch(self, batch_generator: Iterator[Tuple[torch.Tensor, dict]]) -> Metric:
+        """Train single epoch.
+
+        Override this function in order to use custom training.
+
+        Args:
+            batch_generator: Train dataset batch generator. Yields (samples, targets) tuples of
+            size = `self.data_loader.batch_size`.
+        Returns:
+            Metric: An object containing name and np.ndarray value.
+        """
+
+        all_risk_scores = []
+        all_censorships = []
+        all_event_times = []
+
+        losses_dict = {
+            'bce': 0., 'kld': 0.,
+            'surv': 0., 'regu': 0.
+        }
+        for k in self.classification_dict.keys():
+            losses_dict[k] = 0.
+        for k in self.regression_list:
+            losses_dict[k] = 0.
+
+        loggers_dict = {}
+        for k, v in self.classification_dict.items():
+            loggers_dict[k] = Accuracy_Logger(n_classes=len(v), task_name=k, label_names=v)
+        reg_loggers_dict = {}
+        for k in self.regression_list:
+            reg_loggers_dict[k] = Regression_Logger()
+
+        patches = None
+        labeled_batch = None
+        results_dict = None
+        bce_loss, kl_loss = None, None
+        for batch_idx, (patches, labeled_batch) in enumerate(batch_generator):
+            patches = patches.cuda()
+            for k in labeled_batch.keys():
+                if k != 'svs_filename':
+                    labeled_batch[k] = labeled_batch[k].cuda()
+
+            results_dict = self(patches)
+
+            if self.has_vae:
+                # for autoencoder
+                bce_loss, kl_loss = self.vae_loss_fn(patches, results_dict['x_hat'],
+                                                     results_dict['p'], results_dict['q'])
+                losses_dict['bce'] += bce_loss.item()
+                losses_dict['kld'] += kl_loss.item()
+
+            if self.has_surv:
+                hazards, S, Y_hat = results_dict['hazards'], results_dict['S'], results_dict['Y_hat']
+                surv_loss = self.surv_loss_fn(hazards=hazards, S=S, Y=labeled_batch['label'], c=labeled_batch['c'])
+                losses_dict['surv'] += surv_loss.item()
+
+            classification_losses = {}
+            for k in self.classification_dict.keys():
+                classification_losses[k] = self.cls_loss_fn_dict[k](results_dict[k + '_logits'], labeled_batch[k])
+                losses_dict[k] += classification_losses[k].item()
+                loggers_dict[k].log(results_dict[k + '_Y_hat'], labeled_batch[k], results_dict[k + '_Y_prob'])
+
+            regression_losses = {}
+            for k in self.regression_list:
+                regression_losses[k] = self.reg_loss_fn_dict[k](results_dict[k + '_logits'], labeled_batch[k])
+                losses_dict[k] += regression_losses[k].item()
+                reg_loggers_dict[k].log(results_dict[k + '_logits'], labeled_batch[k])
+
+            if self.regu_loss_fn is None:
+                loss_regu = 0
+            else:
+                loss_regu = self.regu_loss_fn(self)
+                losses_dict['regu'] += loss_regu.item()
+
+            total_loss = sum([self.cls_loss_coeff[vi] * v for vi, v in enumerate(classification_losses.values())]) + \
+                         sum([self.reg_loss_coeff[vi] * v for vi, v in enumerate(regression_losses.values())])
+
+            if self.has_surv:
+                total_loss += self.surv_loss_coeff * surv_loss
+
+            if self.has_vae:
+                total_loss += self.bce_loss_coeff * bce_loss + self.kl_loss_coeff * kl_loss
+
+            if batch_idx % 20 == 0:
+                print(
+                    'Batch {:03d}, total_loss: {:.4f}, bce: {:.4f}, kld: {:.4f}, surv: {:.4f}, {}, {}, Regu: {:.4f}'.format(
+                        batch_idx, total_loss.item(),
+                        bce_loss.item() if self.has_vae else 0, kl_loss.item() if self.has_vae else 0,
+                        surv_loss.item() if self.has_surv else 0,
+                        ', '.join(['{}: {:.4f}'.format(k, v) for k, v in classification_losses.items()]),
+                        ', '.join(['{}: {:.4f}'.format(k, v) for k, v in regression_losses.items()]),
+                        loss_regu)
+                )
+
+            if self.has_surv:
+                risk = -torch.sum(S, dim=1).detach().cpu().numpy()
+                all_risk_scores.append(risk)
+                all_censorships.append(labeled_batch['c'].detach().cpu().numpy())
+                all_event_times.append(labeled_batch['event_time'].detach().cpu().numpy())
+
+            # pdb.set_trace()
+            total_loss = total_loss / self.accum_iter
+
+            if self.regu_loss_fn is not None:
+                total_loss += self.regu_loss_coeff * loss_regu
+
+            losses_dict['total_loss'] = total_loss.item()
+
+            total_loss.backward()
+
+            # !!! currently only use one node for training, no need to do this for MoE
+            # if has_moe:
+            #     for p in model.parameters():
+            #         if not hasattr(p, 'skip_allreduce') and p.grad is not None:
+            #             p.grad = net.simple_all_reduce(p.grad)
+
+            if (batch_idx + 1) % self.accum_iter == 0:
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+        if self.has_vae:
+            self.eval()
+            with torch.no_grad():
+                x = patches
+                x_rec = results_dict['x_hat']
+
+                resultsample = torch.cat([x[:32], x_rec[:32]])
+                resultsample = resultsample.view(-1, self.num_channels, self.image_size, self.image_size)
+                resultsample = resultsample.mul_(self.std).add_(self.mean)
+                resultsample = resultsample.cpu()
+                save_image(resultsample, os.path.join(self.save_dir, 'train_rec_sample_' + str(self.epoch) + '.jpg'))
+
+                x_rec = self.generate(self.batch_size)
+                resultsample = x_rec.cpu()[:32]
+                save_image(resultsample.view(-1, self.num_channels, self.image_size, self.image_size),
+                           os.path.join(self.save_dir, 'train_gen_sample_' + str(self.epoch) + '.jpg'))
+
+        print('Epoch: {}'.format(self.epoch))
+
+        if self.has_surv:
+            all_risk_scores = np.concatenate(all_risk_scores)
+            all_censorships = np.concatenate(all_censorships)
+            all_event_times = np.concatenate(all_event_times)
+            c_index = concordance_index_censored((1 - all_censorships).astype(bool), all_event_times, all_risk_scores,
+                                                 tied_tol=1e-08)[0]
+            print('train_c_index: {:.4f}'.format(c_index))
+
+        for k in losses_dict.keys():
+            losses_dict[k] /= len(batch_generator)
+            if self.writer:
+                self.writer.add_scalar('train/loss_{}'.format(k), losses_dict[k], self.epoch)
+                self.writer.add_scalar('train/c_index', c_index if self.has_surv else 0, self.epoch)
+                self.writer.add_scalar('train/total_loss', sum([v for v in losses_dict.values()]), self.epoch)
+
+        print('Epoch {}, {}'.format(
+            self.epoch, ', '.join(['{}: {:.4f}'.format(k, v) for k, v in losses_dict.items()])))
+
+        print('Train cls accs:')
+        for name, labels in self.classification_dict.items():
+            print(20 * '=')
+            print('{} confusion matrix'.format(name))
+            print(loggers_dict[name].get_confusion_matrix())
+
+            for average in ['micro', 'macro', 'weighted']:
+                score = loggers_dict[name].get_f1_score(average=average)
+                losses_dict['{}_f1_{}'.format(name, average)] = score
+                print('f1_score({}) = {}'.format(average, score))
+                if self.writer:
+                    self.writer.add_scalar('val/{}_f1_{}'.format(name, average), score, self.epoch)
+
+            for average in ['macro', 'weighted']:
+                auc = loggers_dict[name].get_auc_score(average=average)
+                losses_dict['{}_auc_{}'.format(name, average)] = auc
+                print('auc_score({}) = {}'.format(average, auc))
+                if self.writer:
+                    self.writer.add_scalar('train/{}_auc_{}'.format(name, average), auc, self.epoch)
+
+            print('generated ROC curves ...')
+            loggers_dict[name].get_roc_curve(
+                os.path.join(self.save_dir, 'epoch_{:03}_{}_train_ROC.jpg'.format(self.epoch, name)))
+
+            print('save data')
+            loggers_dict[name].save_data(
+                os.path.join(self.save_dir, 'epoch_{:03}_{}_train_data.txt'.format(self.epoch, name)))
+
+            for j in range(len(labels)):
+                acc, correct, count = loggers_dict[name].get_summary(j)
+                print('task {}, class {}({}): acc {}, correct {}/{}'.format(name, j, self.classification_dict[name][j],
+                                                                            acc,
+                                                                            correct, count))
+                losses_dict['{}_{}_acc'.format(name, self.classification_dict[name][j])] = acc
+                losses_dict['{}_{}_correct'.format(name, self.classification_dict[name][j])] = correct
+                losses_dict['{}_{}_count'.format(name, self.classification_dict[name][j])] = count
+                if self.writer:
+                    self.writer.add_scalar('train/{}_{}_{}_acc'.format(name, j, self.classification_dict[name][j]), acc,
+                                           self.epoch)
+
+        print('Train reg mses:')
+        for name in self.regression_list:
+            print(20 * '=')
+            mse = reg_loggers_dict[name].mean_squared_error()
+            losses_dict['{}_mse'.format(name)] = mse
+            print('{} mean squared error'.format(mse))
+            if self.writer:
+                self.writer.add_scalar('train/{}_mse'.format(name), mse, self.epoch)
+
+        losses_dict['epoch'] = self.epoch
+        losses_dict['c_index'] = c_index if self.has_surv else 0
+        return Metric(name='patch_mtl_loss', value=np.array(losses_dict['total_loss']))
 
     def validate(self, col_name, round_num, input_tensor_dict,
                  use_tqdm=False, **kwargs):
@@ -524,8 +630,10 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
                 losses_dict['regu'] += loss_regu.item()
 
             total_loss = sum([self.cls_loss_coeff[vi] * v for vi, v in enumerate(classification_losses.values())]) + \
-                         sum([self.reg_loss_coeff[vi] * v for vi, v in enumerate(regression_losses.values())]) + \
-                         self.regu_loss_coeff * loss_regu
+                         sum([self.reg_loss_coeff[vi] * v for vi, v in enumerate(regression_losses.values())])
+
+            if self.regu_loss_fn is not None:
+                total_loss += self.regu_loss_coeff * loss_regu
 
             if self.has_surv:
                 total_loss += self.surv_loss_coeff * surv_loss

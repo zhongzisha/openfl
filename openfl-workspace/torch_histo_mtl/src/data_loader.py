@@ -46,7 +46,7 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
                     debug=False,
                     cache_root=cache_root,
                     norm_type='mean_std',
-                    image_size=128)
+                    image_size=224)
         df = pd.read_csv(csv_filename)
         # # replace the DX_filename
         # DX_filenames_in_local = []
