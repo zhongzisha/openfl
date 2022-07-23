@@ -23,6 +23,24 @@ from openfl.federated import PyTorchDataLoader
 import histo_dataset_v5
 
 
+def gen_splits(df, test_size=0.1):
+    train_df, val_df = None, None
+    counts = {
+        'PAM50_and_Claudin-low_(CLOW)_Molecular_Subtype': 5,
+        'HistoAnno': 3,
+        'IHC_HER2': 3
+    }
+
+    while True:
+        train_df, val_df = train_test_split(df, test_size=test_size, stratify=df['HistoAnno'])
+        good = [len(train_df[key].unique()) == count and len(val_df[key].unique()) == count
+                 for key, count in counts.items()]
+        if np.all(good):
+            break
+
+    return train_df, val_df
+
+
 class PyTorchHistoDataLoader(PyTorchDataLoader):
     """PyTorch data loader for Kvasir dataset."""
 
@@ -56,7 +74,8 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
         # df['DX_filename'] = DX_filenames_in_local
         # # done
 
-        train_df, val_df = train_test_split(df, test_size=0.1, stratify=df['HistoAnno'])
+        # train_df, val_df = train_test_split(df, test_size=0.1, stratify=df['HistoAnno'])
+        train_df, val_df = gen_splits(df, test_size=0.1)
         self.train_dataset = histo_dataset_v5.HistoDataset(df=train_df, mask_root=masks_dir, args=args,
                                                            num_patches=args.num_patches, debug=args.debug,
                                                            prefix='train',
