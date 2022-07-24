@@ -176,6 +176,10 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
+        self.num_tasks = 1 if self.has_surv else 0
+        self.num_tasks += len(self.classification_dict)
+        self.num_tasks += len(self.regression_list)
+
         self.feature_extractor = tv_resnet_ae.__dict__[self.backbone](pretrained=True)
 
         # for param in self.feature_extractor.parameters():   # fix the feature extraction network
@@ -183,7 +187,7 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         latent_dim = self.feature_extractor.latent_dim
         L = latent_dim
         D = latent_dim
-        K = 1
+        K = self.num_tasks
         a1 = [nn.Linear(L, D), nn.Tanh()]
         a2 = [nn.Linear(L, D), nn.Sigmoid()]
         if 0 < self.dropout < 1:
@@ -297,32 +301,35 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
         B = feat.shape[0]  # batch_size
         A_V = self.attention_V(feat)  # A_V: B x P x D
         A_U = self.attention_U(feat)  # A_U: B x P x D
-        A = self.attention_weights(A_V * A_U)  # A: B x P x 1
-        A = F.softmax(A, dim=1)  # B x P
-        A = A.repeat(1, 1, L)  # B x P x L
-        h = torch.sum(A * feat, dim=1)  # B x P x L * B x P x L --> B x L   2 x 25
+        A = self.attention_weights(A_V * A_U)  # A: B x P x K
+        A = F.softmax(A, dim=1)  # B x P x K
+        h = torch.matmul(torch.transpose(A, 1, 2), feat)  # B x K x P * B x P x L --> B x K x L
 
+        index = 0
         if self.has_surv:
-            logits = self.classifier(h)
+            logits = self.classifier(h[:, index, :])
             Y_hat = torch.topk(logits, 1, dim=1)[1]
             hazards = torch.sigmoid(logits)
             S = torch.cumprod(1 - hazards, dim=1)
+            index += 1
         else:
             hazards, S, Y_hat = None, None, None
 
         results_dict.update({'x_hat': x_hat, 'p': p, 'q': q,
                              'hazards': hazards, 'S': S, 'Y_hat': Y_hat})
         for k, classifier in self.classifiers.items():
-            logits_k = classifier(h)
+            logits_k = classifier(h[:, index, :])
             Y_hat_k = torch.topk(logits_k, 1, dim=1)[1]
             Y_prob_k = F.softmax(logits_k, dim=1)
             results_dict.update({k + '_logits': logits_k,
                                  k + '_Y_hat': Y_hat_k.squeeze(1),
                                  k + '_Y_prob': Y_prob_k})
+            index += 1
 
         for k, regressor in self.regressors.items():
-            values_k = regressor(h).squeeze(1)
+            values_k = regressor(h[:, index, :]).squeeze(1)
             results_dict.update({k + '_logits': values_k})
+            index += 1
 
         return results_dict
 
@@ -510,6 +517,10 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
             print('save data')
             loggers_dict[name].save_data(
                 os.path.join(self.save_dir, 'epoch_{:03}_{}_train_data.txt'.format(self.epoch, name)))
+
+            print('generate classification report')
+            loggers_dict[name].get_classification_report(
+                os.path.join(self.save_dir, 'epoch_{:03}_{}_train_report.txt'.format(self.epoch, name)))
 
             for j in range(len(labels)):
                 acc, correct, count = loggers_dict[name].get_summary(j)
@@ -702,6 +713,9 @@ class PyTorchFederatedHistoCNN(PyTorchTaskRunner):
 
             print('save data')
             loggers_dict[name].save_data(os.path.join(save_dir, 'epoch_{:03}_{}_val_data.txt'.format(epoch, name)))
+
+            print('generate classification report')
+            loggers_dict[name].get_classification_report(os.path.join(save_dir, 'epoch_{:03}_{}_val_report.txt'.format(epoch, name)))
 
             for j in range(len(labels)):
                 acc, correct, count = loggers_dict[name].get_summary(j)
