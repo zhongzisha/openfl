@@ -60,7 +60,7 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
         csv_filename = '/data/zhongz2/BigData/TCGA-BRCA/openfl_split_{}.csv'.format(data_path)
         cache_root = 'None'
         args = Args(masks_dir=masks_dir,
-                    num_patches=32,
+                    num_patches=128,
                     debug=False,
                     cache_root=cache_root,
                     norm_type='mean_std',
