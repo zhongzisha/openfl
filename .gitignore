@@ -14,3 +14,4 @@ venv/*
 *.crt
 *.key
 .eggs
+.DS_Store
