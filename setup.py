@@ -80,7 +80,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='openfl',
-    version='1.3',
+    version='1.4',
     author='Intel Corporation',
     description='Federated Learning for the Edge',
     long_description=long_description,
@@ -143,7 +143,7 @@ setup(
         'jupyterlab',
         'numpy',
         'pandas',
-        'protobuf==3.19.4',
+        'protobuf==3.19.5',
         'requests',
         'rich',
         'scikit-learn',
