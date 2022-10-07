@@ -23,24 +23,6 @@ from openfl.federated import PyTorchDataLoader
 import histo_dataset_v5
 
 
-def gen_splits(df, test_size=0.1):
-    train_df, val_df = None, None
-    counts = {
-        'PAM50_and_Claudin-low_(CLOW)_Molecular_Subtype': 5,
-        'HistoAnno': 3,
-        'IHC_HER2': 3
-    }
-
-    while True:
-        train_df, val_df = train_test_split(df, test_size=test_size, stratify=df['HistoAnno'])
-        good = [len(train_df[key].unique()) == count and len(val_df[key].unique()) == count
-                for key, count in counts.items()]
-        if np.all(good):
-            break
-
-    return train_df, val_df
-
-
 class PyTorchHistoDataLoader(PyTorchDataLoader):
     """PyTorch data loader for Kvasir dataset."""
 
@@ -55,27 +37,22 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
         """
         super().__init__(batch_size, **kwargs)
 
-        Args = namedtuple('Args', ['masks_dir', 'num_patches', 'debug', 'cache_root', 'norm_type', 'image_size'])
+        Args = namedtuple('Args',
+                          ['masks_dir', 'num_patches', 'debug', 'cache_root', 'norm_type', 'image_size', 'split_num'])
         masks_dir = './data/all'
-        csv_filename = '/data/zhongz2/BigData/TCGA-BRCA/openfl_split_{}.csv'.format(data_path)
         cache_root = 'None'
         args = Args(masks_dir=masks_dir,
                     num_patches=128,
                     debug=False,
                     cache_root=cache_root,
                     norm_type='mean_std',
-                    image_size=224)
-        df = pd.read_csv(csv_filename)
-        # # replace the DX_filename
-        # DX_filenames_in_local = []
-        # svs_root = './data/svs'
-        # for dx_filename in df['DX_filename'].values:
-        #     DX_filenames_in_local.append(os.path.join(svs_root, os.path.basename(dx_filename)))
-        # df['DX_filename'] = DX_filenames_in_local
-        # # done
+                    image_size=224,
+                    split_num=0)
 
         # train_df, val_df = train_test_split(df, test_size=0.1, stratify=df['HistoAnno'])
-        train_df, val_df = gen_splits(df, test_size=0.1)
+        train_df = pd.read_csv(
+            '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}.csv'.format(args.split_num, data_path))
+        val_df = pd.read_csv('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/val-{}.csv'.format(args.split_num))
         self.train_dataset = histo_dataset_v5.HistoDataset(df=train_df, mask_root=masks_dir, args=args,
                                                            num_patches=args.num_patches, debug=args.debug,
                                                            prefix='train',

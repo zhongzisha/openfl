@@ -26,7 +26,7 @@ fx workspace import --archive my_federation_${FL_VERSION}.zip
 cd my_federation_${FL_VERSION}
 
 # if the data has already saved in slave node, skip it
-python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py 1 img
+python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py 0 0
 
 fx collaborator generate-cert-request -n {COL_LABEL} -d {DATA_PATH}
 
