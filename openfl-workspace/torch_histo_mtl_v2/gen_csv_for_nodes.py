@@ -25,13 +25,13 @@ def gen_splits(df):
 split_num = int(sys.argv[1])
 num_nodes = int(sys.argv[2])
 
-if not os.path.exists('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-0.csv'.format(split_num)):
+if not os.path.exists('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-1.csv'.format(split_num)):
     csv_filename = '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}.csv'.format(split_num)
     df = pd.read_csv(csv_filename)
 
     dfs = gen_splits(df)
     for i in range(num_nodes):
-        dfs[i].to_csv('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}.csv'.format(split_num, i))
+        dfs[i].to_csv('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}.csv'.format(split_num, i+1))
 
 
 

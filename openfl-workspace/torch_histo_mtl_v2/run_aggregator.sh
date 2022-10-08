@@ -18,15 +18,16 @@ fx aggregator generate-cert-request --fqdn $FQDN
 fx aggregator certify --fqdn $FQDN --silent
 fx workspace export
 
-
-# on slave 1
+scp my_federation_${FL_VERSION}.zip node1:/lscratch/${SLURM_JOB_ID}/
+ssh node1 << EOF
 export FL_VERSION=v2
 export FQDN=`grep -r "${HOSTNAME}" /etc/hosts | awk '{ print $1 }'`
-fx workspace import --archive my_federation_${FL_VERSION}.zip
+fx workspace import --archive /data/zhongz2/temp/my_federation_${FL_VERSION}.zip
 cd my_federation_${FL_VERSION}
 
 # if the data has already saved in slave node, skip it
-python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py 0 0
+python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/gen_csv_for_nodes.py ${split_num} ${num_nodes}
+python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py ${split_num} ${node_index}
 
 fx collaborator generate-cert-request -n {COL_LABEL} -d {DATA_PATH}
 
@@ -37,6 +38,8 @@ fx collaborator certify --request-pkg /PATH/TO/col_{COL_LABEL}_to_agg_cert_reque
 fx collaborator certify --import /PATH/TO/agg_to_col_{COL_LABEL}_signed_cert.zip
 
 fx collaborator start -n {COLLABORATOR_LABEL}
+
+EOF
 
 # on master
 fx aggregator start

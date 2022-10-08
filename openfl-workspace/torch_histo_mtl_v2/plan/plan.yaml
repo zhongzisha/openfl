@@ -26,6 +26,13 @@ data_loader :
     collaborator_count : 2
     data_group_name    : histo
     batch_size         : 4
+    norm_type          : 'mean_std'
+    num_patches        : 128
+    masks_dir          : './data/all/'
+    debug              : False
+    cache_root         : 'None'
+    image_size         : 224
+    split_num          : 2
 
 task_runner :
   defaults : plan/defaults/task_runner.yaml
