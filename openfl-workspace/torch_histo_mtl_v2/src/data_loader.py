@@ -47,7 +47,7 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
                     cache_root=cache_root,
                     norm_type='mean_std',
                     image_size=224,
-                    split_num=0)
+                    split_num=1)
 
         # train_df, val_df = train_test_split(df, test_size=0.1, stratify=df['HistoAnno'])
         train_df = pd.read_csv(

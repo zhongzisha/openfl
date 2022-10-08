@@ -22,8 +22,8 @@ def gen_splits(df):
     return dfs
 
 
-num_nodes = int(sys.argv[2])
 split_num = int(sys.argv[1])
+num_nodes = int(sys.argv[2])
 
 if not os.path.exists('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-0.csv'.format(split_num)):
     csv_filename = '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}.csv'.format(split_num)
