@@ -32,7 +32,7 @@ data_loader :
     debug              : False
     cache_root         : 'None'
     image_size         : 224
-    split_num          : 2
+    split_num          : 0
 
 task_runner :
   defaults : plan/defaults/task_runner.yaml

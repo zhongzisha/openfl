@@ -21,7 +21,7 @@ cd my_federation_${FL_VERSION}
 
 echo "copy data to node"
 if [ ! -d ./data/all ]; then
-  python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py ${split_num} ${node_index}
+  python /data/zhongz2/openfl/openfl-workspace/torch_histo_mtl_${FL_VERSION}/copy_cache_files.py ${split_num} ${node_index} ${num_nodes}
 fi
 
 echo "fx collaborator generate-cert-request"

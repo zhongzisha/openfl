@@ -8,7 +8,7 @@
 ### Note: --gres=gpu:x should equal to ntasks-per-node
 #SBATCH --nodes=3
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:k80:1,lscratch:512
+#SBATCH --gres=gpu:p100:1,lscratch:512
 ##SBATCH --constraint=gpuk80
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=90g
@@ -25,6 +25,7 @@ source ~/.bashrc
 source ~/source_cuda102.sh
 source /data/zhongz2/venv_py38_openfl/bin/activate
 
+split_num=4
 
 nodenames_str=`python3 -c "import hostlist,os;print(','.join(hostlist.expand_hostlist(os.environ['SLURM_JOB_NODELIST'])));"`
 echo $nodenames_str
@@ -34,14 +35,12 @@ do
     echo "$index ${nodenames[index]}"
 done
 
-echo "run script on master"
-index=0
-master_name=${nodenames[index]}
-split_num=2
 num_nodes=${#nodenames[@]}
 let num_nodes-=1  # remove the master node
 
-
+echo "run script on master"
+index=0
+master_name=${nodenames[index]}
 ssh $master_name "cd /data/zhongz2/openfl/; bash start_master_step1.sh ${split_num} ${num_nodes}"
 
 # in slaves
@@ -64,13 +63,13 @@ for index in "${!nodenames[@]}"; do
   if [ $index -eq 0 ]; then continue; fi
   echo "$index ${nodenames[index]}"
   node_name=${nodenames[index]}
-  ssh $node_name "cd /data/zhongz2/openfl/; bash start_node_step3_main.sh ${index};"
+  ssh $node_name "cd /data/zhongz2/openfl/; bash start_node_step3_main.sh ${index} ${split_num};"
 done
 
-ssh $master_name "cd /data/zhongz2/openfl/; bash start_master_step2_main.sh"
+ssh $master_name "cd /data/zhongz2/openfl/; bash start_master_step2_main.sh ${split_num}"
 
 echo "job is running"
 
 
-sleep 100000000000
+sleep 10000000000000000
 

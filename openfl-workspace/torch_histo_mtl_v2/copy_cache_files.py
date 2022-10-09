@@ -5,11 +5,11 @@ import tarfile
 if __name__ == '__main__':
     split_num = sys.argv[1]
     shard_num = sys.argv[2]
-    # cache_data_type = sys.argv[2]
+    num_nodes = sys.argv[3]
     cache_data_type = 'img'
 
     csv_filenames = [
-        '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}.csv'.format(split_num, shard_num),
+        '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}-of-{}.csv'.format(split_num, shard_num, num_nodes),
         '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/val-{}.csv'.format(split_num)
     ]
     for csv_filename in csv_filenames:

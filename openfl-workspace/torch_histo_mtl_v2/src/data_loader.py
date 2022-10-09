@@ -37,6 +37,7 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
         """
         super().__init__(batch_size, **kwargs)
         print('kwargs in dataloader', kwargs)
+        collaborator_count = kwargs['collaborator_count']
         Args = namedtuple('Args',
                           ['masks_dir', 'num_patches', 'debug', 'cache_root', 'norm_type', 'image_size', 'split_num'])
         args = Args(masks_dir=kwargs['masks_dir'],
@@ -49,7 +50,9 @@ class PyTorchHistoDataLoader(PyTorchDataLoader):
 
         # train_df, val_df = train_test_split(df, test_size=0.1, stratify=df['HistoAnno'])
         train_df = pd.read_csv(
-            '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}.csv'.format(args.split_num, data_path))
+            '/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/train-{}-node-{}-of-{}.csv'.format(args.split_num,
+                                                                                                 data_path,
+                                                                                                 collaborator_count))
         val_df = pd.read_csv('/data/zhongz2/BigData/TCGA-BRCA/splits_HistoAnno/val-{}.csv'.format(args.split_num))
         self.train_dataset = histo_dataset_v5.HistoDataset(df=train_df, mask_root=args.masks_dir, args=args,
                                                            num_patches=args.num_patches, debug=args.debug,
