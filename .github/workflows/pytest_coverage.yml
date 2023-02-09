@@ -4,8 +4,6 @@
 name: Pytest and code coverage 
 
 on:
-  push:
-    branches: [ develop ]
   pull_request:
     branches: [ develop ]
 
@@ -31,5 +29,5 @@ jobs:
         pip install .
     - name: Test with pytest and report code coverage
       run: |
-        coverage run -m pytest
+        coverage run -m pytest -rA
         coverage report

@@ -58,7 +58,7 @@ This causes community fragmentation and distracts from some of the bigger proble
 
 ## Upcoming OpenFL releases
 
-### OpenFL 1.5 (Q4 2022)
+### OpenFL 1.5 (Q1 2023)
 1. OpenFL Workflows Interface (Experimental)
 2. New use cases enabled by custom workflows
     * End-of-round validation with aggregator dataset
@@ -66,11 +66,11 @@ This causes community fragmentation and distracts from some of the bigger proble
     * Vertical Federated Learning
     * Model Watermarking
     * Differential Privacy
-3. Securing the director / envoy infrastructure
+3. Habana GPU Support
+4. Securing the director / envoy infrastructure
     * Optional notification to plan participants to agree to experiment sent to their infrastructure
-    * Send source code instead of model objects
-4. Significantly improved documentation
-5. New OpenFL Security Repo for that extends OpenFL to provide governance, and end-to-end security for federated learning experiments
+5. Significantly improved documentation
+6. New OpenFL Security Repo for that extends OpenFL to provide governance, and end-to-end security for federated learning experiments
 
 ### OpenFL 2.0 (2023)
 1. Interface Cohesion

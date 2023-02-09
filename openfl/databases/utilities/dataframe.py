@@ -1,17 +1,16 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 """Convenience Utilities for DataFrame."""
 
-from types import MethodType
-
 import numpy as np
 import pandas as pd
-from typing import Optional, Union
+from typing import Optional
 
 ROUND_PLACEHOLDER = 1000000
 
-def _search(self, tensor_name: str = None, origin: str = None, 
+
+def _search(self, tensor_name: str = None, origin: str = None,
             fl_round: int = None, metric: bool = None, tags: tuple = None
             ) -> pd.DataFrame:
     """
@@ -32,7 +31,7 @@ def _search(self, tensor_name: str = None, origin: str = None,
             tags:        Tuple of unstructured tags associated with the tensor
 
         Returns:
-            pd.DataFrame : New dataframe that matches the search query from 
+            pd.DataFrame : New dataframe that matches the search query from
                            the tensor_db dataframe
     """
     df = None
@@ -62,8 +61,8 @@ def _search(self, tensor_name: str = None, origin: str = None,
 
 
 def _store(self, tensor_name: str = '_', origin: str = '_',
-           fl_round: int = ROUND_PLACEHOLDER, metric: bool = False, 
-           tags: tuple = ('_',), nparray: np.array = None, 
+           fl_round: int = ROUND_PLACEHOLDER, metric: bool = False,
+           tags: tuple = ('_',), nparray: np.array = None,
            overwrite: bool = True) -> None:
     """
         Convenience method to store a new tensor in the dataframe.
@@ -72,10 +71,11 @@ def _store(self, tensor_name: str = '_', origin: str = '_',
             tensor_name [ optional ] : The name of the tensor (or metric) to be saved
             origin      [ optional ] : Origin of the tensor
             fl_round    [ optional ] : Round the tensor is associated with
-            metric:     [ optional ] : Is the tensor a metric?
-            tags:       [ optional ] : Tuple of unstructured tags associated with the tensor
-            np.array    [ required ] : Value to store associated with the other included information (i.e. TensorKey info)
-            overwrite:  [ optional ] : If the tensor is already present in the dataframe
+            metric      [ optional ] : Is the tensor a metric?
+            tags        [ optional ] : Tuple of unstructured tags associated with the tensor
+            nparray     [ required ] : Value to store associated with the other
+                                       included information (i.e. TensorKey info)
+            overwrite   [ optional ] : If the tensor is already present in the dataframe
                                        should it be overwritten?
 
         Returns:
@@ -95,12 +95,11 @@ def _store(self, tensor_name: str = '_', origin: str = '_',
         idx = idx[0]
     else:
         idx = self.shape[0]
-    self.loc[idx] = \
-            [tensor_name, origin, str(fl_round), metric, tags, nparray]
+    self.loc[idx] = [tensor_name, origin, str(fl_round), metric, tags, nparray]
 
 
 def _retrieve(self, tensor_name: str = '_', origin: str = '_',
-              fl_round: int = ROUND_PLACEHOLDER, metric: bool = False, 
+              fl_round: int = ROUND_PLACEHOLDER, metric: bool = False,
               tags: tuple = ('_',)) -> Optional[np.array]:
     """
         Convenience method to retrieve tensor from the dataframe.
@@ -118,14 +117,12 @@ def _retrieve(self, tensor_name: str = '_', origin: str = '_',
     """
 
     df = self[(self['tensor_name'] == tensor_name)
-                & (self['origin'] == origin)
-                & (self['round'] == str(fl_round))
-                & (self['report'] == metric)
-                & (self['tags'] == tags)]['nparray']
+              & (self['origin'] == origin)
+              & (self['round'] == str(fl_round))
+              & (self['report'] == metric)
+              & (self['tags'] == tags)]['nparray']
 
     if len(df) > 0:
         return df.iloc[0]
     else:
         return None
-
-

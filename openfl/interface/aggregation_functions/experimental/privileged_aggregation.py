@@ -1,11 +1,9 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 """Aggregation function interface module."""
 from abc import abstractmethod
-from typing import Iterator
 from typing import List
 from typing import Tuple
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -60,4 +58,3 @@ class PrivilegedAggregationFunction(AggregationFunction):
             np.ndarray: aggregated tensor
         """
         raise NotImplementedError
-

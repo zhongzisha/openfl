@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 """Workspace module."""
 
@@ -105,7 +105,7 @@ def create(prefix, template):
     else:
         echo('No additional requirements for workspace defined. Skipping...')
     prefix_hash = _get_dir_hash(str(prefix.absolute()))
-    with open(OPENFL_USERDIR / f'requirements.{prefix_hash}.txt', 'w') as f:
+    with open(OPENFL_USERDIR / f'requirements.{prefix_hash}.txt', 'w', encoding='utf-8') as f:
         check_call([executable, '-m', 'pip', 'freeze'], shell=False, stdout=f)
 
     print_tree(prefix, level=3)
@@ -131,6 +131,7 @@ def export_(pip_install_options: Tuple[str]):
 
     from plan import freeze_plan
     from openfl.interface.cli_helper import WORKSPACE
+    from openfl.utilities.utils import rmtree
 
     plan_file = Path('plan/plan.yaml').absolute()
     try:
@@ -173,7 +174,7 @@ def export_(pip_install_options: Tuple[str]):
     # Create Zip archive of directory
     echo('\n 🗜️ Preparing workspace distribution zip file')
     make_archive(archive_name, archive_type, tmp_dir)
-
+    rmtree(tmp_dir)
     echo(f'\n ✔️ Workspace exported to archive: {archive_file_name}')
 
 
@@ -238,14 +239,14 @@ def certify():
 
     echo('1.2 Create Database')
 
-    with open(CERT_DIR / 'ca/root-ca/db/root-ca.db', 'w') as f:
+    with open(CERT_DIR / 'ca/root-ca/db/root-ca.db', 'w', encoding='utf-8') as f:
         pass  # write empty file
-    with open(CERT_DIR / 'ca/root-ca/db/root-ca.db.attr', 'w') as f:
+    with open(CERT_DIR / 'ca/root-ca/db/root-ca.db.attr', 'w', encoding='utf-8') as f:
         pass  # write empty file
 
-    with open(CERT_DIR / 'ca/root-ca/db/root-ca.crt.srl', 'w') as f:
+    with open(CERT_DIR / 'ca/root-ca/db/root-ca.crt.srl', 'w', encoding='utf-8') as f:
         f.write('01')  # write file with '01'
-    with open(CERT_DIR / 'ca/root-ca/db/root-ca.crl.srl', 'w') as f:
+    with open(CERT_DIR / 'ca/root-ca/db/root-ca.crl.srl', 'w', encoding='utf-8') as f:
         f.write('01')  # write file with '01'
 
     echo('1.3 Create CA Request and Certificate')
@@ -277,14 +278,14 @@ def certify():
 
     echo('2.2 Create Database')
 
-    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.db', 'w') as f:
+    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.db', 'w', encoding='utf-8') as f:
         pass  # write empty file
-    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.db.attr', 'w') as f:
+    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.db.attr', 'w', encoding='utf-8') as f:
         pass  # write empty file
 
-    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.crt.srl', 'w') as f:
+    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.crt.srl', 'w', encoding='utf-8') as f:
         f.write('01')  # write file with '01'
-    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.crl.srl', 'w') as f:
+    with open(CERT_DIR / 'ca/signing-ca/db/signing-ca.crl.srl', 'w', encoding='utf-8') as f:
         f.write('01')  # write file with '01'
 
     echo('2.3 Create Signing Certificate CSR')
@@ -320,8 +321,8 @@ def certify():
     echo('3   Create Certificate Chain')
 
     # create certificate chain file by combining root-ca and signing-ca
-    with open(CERT_DIR / 'cert_chain.crt', 'w') as d:
-        with open(CERT_DIR / 'ca/root-ca.crt') as s:
+    with open(CERT_DIR / 'cert_chain.crt', 'w', encoding='utf-8') as d:
+        with open(CERT_DIR / 'ca/root-ca.crt', encoding='utf-8') as s:
             d.write(s.read())
         with open(CERT_DIR / 'ca/signing-ca.crt') as s:
             d.write(s.read())
@@ -330,7 +331,7 @@ def certify():
 
 
 def _get_requirements_dict(txtfile):
-    with open(txtfile, 'r') as snapshot:
+    with open(txtfile, 'r', encoding='utf-8') as snapshot:
         snapshot_dict = {}
         for line in snapshot:
             try:
@@ -394,22 +395,23 @@ def dockerize_(context, base_image, save):
         'BASE_IMAGE': base_image
     }
 
-    client = docker.from_env(timeout=3600)
+    cli = docker.APIClient()
     echo('Building the Docker image')
     try:
-        client.images.build(
+        for line in cli.build(
             path=str(workspace_path),
             tag=workspace_name,
             buildargs=build_args,
-            dockerfile=dockerfile_workspace
-        )
-    except docker.errors.BuildError as e:
-        for log in e.build_log:
-            msg = log.get('stream')
-            if msg:
-                echo(msg)
-        echo('Failed to build the image\n' + str(e) + '\n')
-        sys.exit(1)
+            dockerfile=dockerfile_workspace,
+            timeout=3600,
+            decode=True
+        ):
+            if 'stream' in line:
+                print(f'> {line["stream"]}', end='')
+            elif 'error' in line:
+                echo('Failed to build the Docker image:')
+                echo(line)
+                sys.exit(1)
     finally:
         os.remove(workspace_archive)
         os.remove(dockerfile_workspace)
@@ -419,6 +421,7 @@ def dockerize_(context, base_image, save):
     if save:
         workspace_image_tar = workspace_name + '_image.tar'
         echo('Saving the Docker image...')
+        client = docker.from_env(timeout=3600)
         image = client.images.get(f'{workspace_name}')
         resp = image.save(named=True)
         with open(workspace_image_tar, 'wb') as f:
@@ -435,6 +438,17 @@ def dockerize_(context, base_image, save):
              'In option is ignored this command will build an image that can only run '
              'with gramine-direct (not in enclave).',
         )
+@option('-e', '--enclave_size', required=False,
+        type=str, default='16G',
+        help='Memory size of the enclave, defined as number with size suffix. '
+             'Must be a power-of-2.\n'
+             'Default is 16G.'
+        )
+@option('-t', '--tag', required=False,
+        type=str, multiple=False, default='',
+        help='Tag of the built image.\n'
+             'By default, the workspace name is used.'
+        )
 @option('-o', '--pip-install-options', required=False,
         type=str, multiple=True, default=tuple,
         help='Options for remote pip install. '
@@ -445,8 +459,8 @@ def dockerize_(context, base_image, save):
         help='Dump the Docker image to an archive')
 @option('--rebuild', help='Build images with `--no-cache`', is_flag=True)
 @pass_context
-def graminize_(context, signing_key: Path, pip_install_options: Tuple[str],
-               save: bool, rebuild: bool) -> None:
+def graminize_(context, signing_key: Path, enclave_size: str, tag: str,
+               pip_install_options: Tuple[str], save: bool, rebuild: bool) -> None:
     """
     Build gramine app inside a docker image.
 
@@ -493,6 +507,10 @@ def graminize_(context, signing_key: Path, pip_install_options: Tuple[str],
 
     workspace_path = Path.cwd()
     workspace_name = workspace_path.name
+
+    if not tag:
+        tag = workspace_name
+
     context.invoke(export_, pip_install_options=pip_install_options)
     workspace_archive = workspace_path / f'{workspace_name}.zip'
 
@@ -501,9 +519,10 @@ def graminize_(context, signing_key: Path, pip_install_options: Tuple[str],
     echo('\n 🐋 Building graminized workspace image...')
     signing_key = f'--secret id=signer-key,src={signing_key} ' if sgx_build else ''
     graminized_build_command = (
-        f'docker build -t {workspace_name} {rebuild_option} '
+        f'docker build -t {tag} {rebuild_option} '
         '--build-arg BASE_IMAGE=gramine_openfl '
         f'--build-arg WORKSPACE_ARCHIVE={workspace_archive.relative_to(workspace_path)} '
+        f'--build-arg SGX_ENCLAVE_SIZE={enclave_size} '
         f'--build-arg SGX_BUILD={int(sgx_build)} '
         f'{signing_key}'
         f'-f {grainized_ws_dockerfile} {workspace_path}')
@@ -512,9 +531,9 @@ def graminize_(context, signing_key: Path, pip_install_options: Tuple[str],
 
     if save:
         echo('\n 💾 Saving the graminized workspace image...')
-        save_image_command = f'docker save {workspace_name} | gzip > {workspace_name}.tar.gz'
+        save_image_command = f'docker save {tag} | gzip > {tag}.tar.gz'
         open_pipe(save_image_command)
-        echo(f'\n ✔️ The image saved to file: {workspace_name}.tar.gz')
+        echo(f'\n ✔️ The image saved to file: {tag}.tar.gz')
 
 
 def apply_template_plan(prefix, template):

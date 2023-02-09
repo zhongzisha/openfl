@@ -1,7 +1,8 @@
 # Open Federated Learning (OpenFL) - An Open-Source Framework For Federated Learning
 
-[![PyPI - Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue)](https://pypi.org/project/openfl/)
-[![Continuous Integration](https://github.com/intel/openfl/actions/workflows/python-app.yml/badge.svg?branch=develop)](https://github.com/intel/openfl/actions/workflows/python-app.yml)
+[![PyPI - Python Version](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://pypi.org/project/openfl/)
+[![Ubuntu CI status](https://github.com/intel/openfl/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/intel/openfl/actions/workflows/ubuntu.yml)
+[![Windows CI status](https://github.com/intel/openfl/actions/workflows/windows.yml/badge.svg)](https://github.com/intel/openfl/actions/workflows/windows.yml)
 [![Documentation Status](https://readthedocs.org/projects/openfl/badge/?version=latest)](https://openfl.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/openfl)](https://pepy.tech/project/openfl)
 [![DockerHub](https://img.shields.io/docker/pulls/intel/openfl.svg)](https://hub.docker.com/r/intel/openfl)
@@ -10,6 +11,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Citation](https://img.shields.io/badge/cite-citation-brightgreen)](https://arxiv.org/abs/2105.06413)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/intel/openfl/blob/develop/openfl-tutorials/interactive_api/numpy_linear_regression/workspace/SingleNotebook.ipynb)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6599/badge)](https://bestpractices.coreinfrastructure.org/projects/6599)
 
 OpenFL is a Python 3 framework for Federated Learning. OpenFL is designed to be a _flexible_, _extensible_ and _easily learnable_ tool for data scientists. OpenFL is hosted by Intel, aims to be community-driven, and welcomes contributions back to the project. 
 
@@ -33,6 +35,9 @@ Setup long-lived components to run many experiments in series. Recommended for F
 - [Aggregator-based Workflow](https://openfl.readthedocs.io/en/latest/running_the_federation.html#aggregator-based-workflow):
 Define an experiment and distribute it manually. All participants can verify model code and [FL plan](https://openfl.readthedocs.io/en/latest/running_the_federation.html#federated-learning-plan-fl-plan-settings) prior to execution. The federation is terminated when the experiment is finished
 
+- [Workflow Interface](https://openfl.readthedocs.io/en/latest/workflow_interface.html) ([*experimental*](https://openfl.readthedocs.io/en/latest/experimental_features.html)):
+Create complex experiments that extend beyond traditional horizontal federated learning. See the [experimental tutorials](https://github.com/intel/openfl/blob/develop/openfl-tutorials/experimental/) to learn how to coordinate [aggregator validation after collaborator model training](https://github.com/intel/openfl/tree/develop/openfl-tutorials/experimental/Workflow_Interface_102_Aggregator_Validation.ipynb), [perform global differentially private federated learning](https://github.com/psfoley/openfl/tree/experimental-workflow-interface/openfl-tutorials/experimental/Global_DP), measure the amount of private information embedded in a model after collaborator training with [privacy meter](https://github.com/intel/openfl/blob/develop/openfl-tutorials/experimental/Privacy_Meter/readme.md), or [add a watermark to a federated model](https://github.com/intel/openfl/blob/develop/openfl-tutorials/experimental/Workflow_Interface_301_MNIST_Watermarking.ipynb).
+
 The quickest way to test OpenFL is to follow our [tutorials](https://github.com/intel/openfl/tree/develop/openfl-tutorials). </br>
 Read the [blog post](https://towardsdatascience.com/go-federated-with-openfl-8bc145a5ead1) explaining steps to train a model with OpenFL. </br>
 Check out the [online documentation](https://openfl.readthedocs.io/en/latest/index.html) to launch your first federation.
@@ -41,7 +46,7 @@ Check out the [online documentation](https://openfl.readthedocs.io/en/latest/ind
 ## Requirements
 
 - Ubuntu Linux 16.04 or 18.04.
-- Python 3.6+ (recommended to use with [Virtualenv](https://virtualenv.pypa.io/en/latest/)).
+- Python 3.7+ (recommended to use with [Virtualenv](https://virtualenv.pypa.io/en/latest/)).
 
 OpenFL supports training with TensorFlow 2+ or PyTorch 1.3+ which should be installed separately. User can extend the list of supported Deep Learning frameworks if needed.
 
@@ -64,6 +69,8 @@ and OpenFL developers and researchers continue to work very closely with UPenn o
 Although initially developed for use in medical imaging, OpenFL designed to be agnostic to the use-case, the industry, and the machine learning framework.
 
 You can find more details in the following articles:
+- [Pati S, et al., 2022](https://www.nature.com/articles/s41467-022-33407-5)
+- [Reina A, et al., 2021](https://arxiv.org/abs/2105.06413)
 - [Sheller MJ,  et al., 2020](https://www.nature.com/articles/s41598-020-69250-1) 
 - [Sheller MJ, et al., 2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6589345)
 - [Yang Y, et al., 2019](https://arxiv.org/abs/1902.04885)
@@ -79,11 +86,30 @@ You can find more details in the following articles:
 | FedCurv | [Shoham et al., 2019](https://arxiv.org/pdf/1910.07796.pdf) | ✅ | ❌ | ❌ | [docs](http://openfl.readthedocs.io/en/latest/supported_aggregation_algorithms.html#fedcurv) |
 
 ## Support
-We welcome questions, issue reports, and suggestions:
+Please join us for our bi-monthly community meetings starting December 1 & 2, 2022! <br>
+Meet with some of the Intel team members behind OpenFL. <br>
+We will be going over our roadmap, open for Q&A, and welcome idea sharing. <br>
+
+2-time slots available:
+
+Europe
+Occurs every 2 months on the first Thursday of that month, 6 pm <br>
+https://intel.zoom.us/j/96858990725?pwd=ODJRVUhXNGNQU2YySTFqRi9qRXdtUT09 <br>
+Meeting ID: 968 5899 0725 <br>
+Passcode: 157568 <br>
+
+Asia Pacific
+Occurs every 2 months on the first Friday of that month, 10 AM GMT+8 <br>
+https://intel.zoom.us/j/98930263828?pwd=VkhIbVBtTG9xaHZCZ2dQNUdYSWpydz09 <br>
+Meeting ID: 989 3026 3828 <br>
+Passcode: 774320 <br>
+
+See you there!
+
+We also always welcome questions, issue reports, and suggestions via:
 
 * [GitHub Issues](https://github.com/intel/openfl/issues)
 * [Slack workspace](https://join.slack.com/t/openfl/shared_invite/zt-ovzbohvn-T5fApk05~YS_iZhjJ5yaTw)
-
 
 ## License
 This project is licensed under [Apache License Version 2.0](LICENSE). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.

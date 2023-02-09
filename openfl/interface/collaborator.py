@@ -1,8 +1,9 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 """Collaborator module."""
 
 import sys
+import os
 from logging import getLogger
 
 from click import echo
@@ -93,7 +94,7 @@ def register_data_path(collaborator_name, data_path=None, silent=False):
     data_yaml = 'plan/data.yaml'
     separator = ','
     if isfile(data_yaml):
-        with open(data_yaml, 'r') as f:
+        with open(data_yaml, 'r', encoding='utf-8') as f:
             for line in f:
                 if separator in line:
                     key, val = line.split(separator, maxsplit=1)
@@ -102,7 +103,7 @@ def register_data_path(collaborator_name, data_path=None, silent=False):
     d[collaborator_name] = dir_path
 
     # Write the data.yaml
-    with open(data_yaml, 'w') as f:
+    with open(data_yaml, 'w', encoding='utf-8') as f:
         for key, val in d.items():
             f.write(f'{key}{separator}{val}\n')
 
@@ -165,6 +166,8 @@ def generate_cert_request(collaborator_name, data_path, silent, skip_package):
         from os import remove
         from glob import glob
 
+        from openfl.utilities.utils import rmtree
+
         archive_type = 'zip'
         archive_name = f'col_{common_name}_to_agg_cert_request'
         archive_file_name = archive_name + '.' + archive_type
@@ -182,6 +185,7 @@ def generate_cert_request(collaborator_name, data_path, silent, skip_package):
 
         # Create Zip archive of directory
         make_archive(archive_name, archive_type, tmp_dir)
+        rmtree(tmp_dir)
 
         echo(f'Archive {archive_file_name} with certificate signing'
              f' request created')
@@ -194,7 +198,7 @@ def generate_cert_request(collaborator_name, data_path, silent, skip_package):
 
 def find_certificate_name(file_name):
     """Parse the collaborator name."""
-    col_name = str(file_name).split('/')[-1].split('.')[0][4:]
+    col_name = str(file_name).split(os.sep)[-1].split('.')[0][4:]
     return col_name
 
 
@@ -217,7 +221,7 @@ def register_collaborator(file_name):
 
     if not isfile(cols_file):
         cols_file.touch()
-    with open(cols_file, 'r') as f:
+    with open(cols_file, 'r', encoding='utf-8') as f:
         doc = load(f, Loader=FullLoader)
 
     if not doc:  # YAML is not correctly formatted
@@ -237,7 +241,7 @@ def register_collaborator(file_name):
     else:
 
         doc['collaborators'].append(col_name)
-        with open(cols_file, 'w') as f:
+        with open(cols_file, 'w', encoding='utf-8') as f:
             dump(doc, f)
 
         echo('\nRegistering '
@@ -281,6 +285,7 @@ def certify(collaborator_name, silent, request_pkg=None, import_=False):
     from openfl.cryptography.io import read_key
     from openfl.cryptography.io import write_crt
     from openfl.interface.cli_helper import CERT_DIR
+    from openfl.utilities.utils import rmtree
 
     common_name = f'{collaborator_name}'.lower()
 
@@ -377,6 +382,7 @@ def certify(collaborator_name, silent, request_pkg=None, import_=False):
 
         # Create Zip archive of directory
         make_archive(archive_name, archive_type, tmp_dir)
+        rmtree(tmp_dir)
 
     else:
         # Copy the signed certificate and cert chain into PKI_DIR

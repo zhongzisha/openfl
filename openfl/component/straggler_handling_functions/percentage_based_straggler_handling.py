@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 """Percentage based Straggler Handling function."""
@@ -10,7 +10,8 @@ class PercentageBasedStragglerHandling(StragglerHandlingFunction):
         self,
         percent_collaborators_needed=1.0,
         minimum_reporting=1,
-        **kwargs):
+        **kwargs
+    ):
         self.percent_collaborators_needed = percent_collaborators_needed
         self.minimum_reporting = minimum_reporting
 

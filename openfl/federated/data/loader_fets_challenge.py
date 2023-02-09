@@ -1,12 +1,7 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 """PyTorchDataLoader module."""
-
-from math import ceil, fabs
-
-import numpy as np
-
 from .loader import DataLoader
 
 

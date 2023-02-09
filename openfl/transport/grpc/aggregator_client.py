@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 """AggregatorGRPCClient module."""
@@ -98,6 +98,8 @@ def _resend_data_on_reconnection(func):
                     self.logger.info(
                         f'Attempting to resend data request to aggregator at {self.uri}'
                     )
+                elif e.code() == grpc.StatusCode.UNAUTHENTICATED:
+                    raise
                 continue
             break
         return response
