@@ -6,6 +6,8 @@ For example: HPU_pytorch_tinyimagenet.ipynb placed under workspace folder contai
 
  All the execution steps mention in last section (**V. How to run this tutorial**) remain same for HPU examples but as pre-requisite it needs some additional environment setup and Habana supported package installations which is explained below from **section I to IV**.
 
+**Note:** By default these experiments utilize only 1 HPU device
+
  <br/>
 
  ## **I. AWS DL1 Instance Setup**
@@ -25,6 +27,8 @@ For example: HPU_pytorch_tinyimagenet.ipynb placed under workspace folder contai
 chmod +x habanalabs-installer.sh
 ./habanalabs-installer.sh install --type base
 ```
+ **NOTE:** Habanalabs requires python 3.8 version. It is hardcoded in [habanalabs-installer.sh](https://vault.habana.ai/ui/native/gaudi-installer/latest/habanalabs-installer.sh)
+ 
 You can refer the [Habana docs](https://docs.habana.ai/en/latest/Installation_Guide/Bare_Metal_Fresh_OS.html#set-up-synapseai-sw-stack) mentioned [GitHub repository](https://github.com/HabanaAI/Setup_and_Install) for detailed instructions.
 
 <br/>
@@ -69,38 +73,30 @@ The default virtual environment folder is $HOME/habanalabs-venv. To override the
 
 The following set of code additions are required in the workspace notebook to run a model on Habana. The following steps cover Eager and Lazy modes of execution.
 
-### 1. Load the Habana PyTorch Plugin Library, libhabana_pytorch_plugin.so.
-
-```
-import torch
-from habana_frameworks.torch.utils.library_loader import load_habana_module
-load_habana_module()
-```
-
-### 2. Target the Gaudi HPU device:
+### 1. Target the Gaudi HPU device:
 
 ```
 device = torch.device("hpu")
 ```
-### 3. Move the model to the device:
+### 2. Move the model to the device:
 
 **There is a dependency in the order of execution (moving model to HPU and intializing optimizer). The workaround is to execute this step before initializing any optimizers.**
 
 ```
 model.to(device)
 ```
-### 4. Import the Habana Torch Library:
+### 3. Import the Habana Torch Library:
 
 ```
 import habana_frameworks.torch.core as htcore
 ```
-### 5. Enable Lazy execution mode by setting the environment variable shown below. 
+### 4. Enable Lazy execution mode by setting the environment variable shown below. 
 Do not set this environment variable if you want to execute your code in Eager mode:
 
 ```
 os.environ["PT_HPU_LAZY_MODE"] = "1"
 ```
-### 6. In Lazy mode, execution is triggered wherever data is read back to the host from the Habana device. 
+### 5. In Lazy mode, execution is triggered wherever data is read back to the host from the Habana device. 
 For example, execution is triggered if you are running a topology and getting loss value into the host from the device with loss.item(). Adding a mark_step() in the code is another way to trigger execution:
 
 ```

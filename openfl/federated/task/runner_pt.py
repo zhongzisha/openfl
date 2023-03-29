@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 """PyTorchTaskRunner module."""
@@ -216,7 +216,7 @@ class PyTorchTaskRunner(nn.Module, TaskRunner):
 
         # This will signal that the optimizer values are now present,
         # and can be loaded when the model is rebuilt
-        self.train_round_completed = True
+        self.training_round_completed = True
 
         # Return global_tensor_dict, local_tensor_dict
         return global_tensor_dict, local_tensor_dict
@@ -582,7 +582,7 @@ def expand_derived_opt_state_dict(derived_opt_state_dict, device):
 
     opt_state_dict = {'param_groups': [], 'state': {}}
     nb_params_per_group = list(
-        derived_opt_state_dict.pop('__opt_group_lengths').astype(np.int)
+        derived_opt_state_dict.pop('__opt_group_lengths').astype(np.int32)
     )
 
     # Construct the expanded dict.

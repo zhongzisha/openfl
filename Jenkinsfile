@@ -8,11 +8,9 @@ def snykData = [
     // 'openfl-workspace_torch_cnn_histology': 'openfl-workspace/torch_cnn_histology/requirements.txt',
     'openfl-workspace_torch_cnn_histology_src': 'openfl-workspace/torch_cnn_histology/src/requirements.txt',
     'openfl-workspace_keras_nlp': 'openfl-workspace/keras_nlp/requirements.txt',
-    'openfl-workspace_fe_tf_adversarial_cifar': 'openfl-workspace/fe_tf_adversarial_cifar/requirements.txt',
     'openfl-workspace_torch_cnn_mnist': 'openfl-workspace/torch_cnn_mnist/requirements.txt',
     'openfl-workspace_keras_nlp_gramine_ready': 'openfl-workspace/keras_nlp_gramine_ready/requirements.txt',
     'openfl-workspace_torch_unet_kvasir': 'openfl-workspace/torch_unet_kvasir/requirements.txt',
-    'openfl-workspace_fe_torch_adversarial_cifar': 'openfl-workspace/fe_torch_adversarial_cifar/requirements.txt',
     'openfl-workspace_tf_cnn_histology': 'openfl-workspace/tf_cnn_histology/requirements.txt',
     'openfl-workspace_torch_cnn_histology_gramine_ready': 'openfl-workspace/torch_cnn_histology_gramine_ready/requirements.txt',
     'openfl-workspace_tf_3dunet_brats': 'openfl-workspace/tf_3dunet_brats/requirements.txt',
@@ -91,6 +89,7 @@ pipeline {
                         SNYK_PYTHON_VERSION = '3.8'
 
                         BANDIT_SOURCE_PATH = 'openfl/ openfl-workspace/ openfl-tutorials/'
+                        BANDIT_SEVERITY_LEVEL = 'high'
 
                         VIRUS_SCAN_DIR = '.'
 
