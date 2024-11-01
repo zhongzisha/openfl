@@ -15,7 +15,7 @@ All interfaces in OpenFL support the standard horizontal FL training workflow to
 4. The collaborator performs validation with their local validation dataset on their locally trained model, and sends their validation metrics to the aggregator (locally_tuned_model_validation task)
 5. The aggregator applies an aggregation function (weighted average, FedCurv, FedProx, etc.) to the model weights, and reports the aggregate metrics.
 
-The [Task Assigner](https://github.com/intel/openfl/blob/develop/openfl-workspace/workspace/plan/defaults/assigner.yaml#L7-L9) determines the list of collaborator tasks to be performed, 
+The [Task Assigner](https://github.com/securefederatedai/openfl/blob/develop/openfl-workspace/workspace/plan/defaults/assigner.yaml#L7-L9) determines the list of collaborator tasks to be performed, 
 and both in the task runner API as well as the interactive API these tasks can be modified (to varying degrees).
 For example, to perform federated evaluation of a model, only the `aggregated_model_validation` task would be listed for the assigner's block of the federated plan.
 Equivalently for the interactive API, this can be done by only registering a single validation task.
@@ -36,13 +36,13 @@ In the process of thinking about federated workflows, and the properties that ar
 7. Don't reinvent unless absolutely necessary
 
 ### 1.2 Security, Privacy, and Governance
-OpenFL is designed for security and privacy, and later this year we will be releasing some exciting extensions that build on running [OpenFL experiments within SGX enclaves](https://github.com/intel/openfl/blob/develop/openfl-gramine/MANUAL.md).   
+OpenFL is designed for security and privacy, and soon we will be releasing some exciting extensions that build on running [OpenFL experiments within SGX enclaves](https://github.com/securefederatedai/openfl/blob/develop/openfl-gramine/MANUAL.md).   
 
-### 1.4 Decoupling interface from infrastructure
+### 1.3 Decoupling interface from infrastructure
 The task runner interface is coupled with the the single experiment aggregator / collaborator infrastructure, and the interactive API is tied to the director / envoy infrastructure. 
 The interactive API was originally designed to be a high-level API for OpenFL, but for the cases when more control is required by users, access to lower level interfaces is necessary.
 
-### 1.3 Consolidating interfaces
+### 1.4 Consolidating interfaces
 Today we support three interfaces: TaskRunner, native Python API, and interactive API. These are all distinct APIs, and are not particularly interoperable.
 By the time we reach OpenFL 2.0, our intention is to deprecate the original native [Python API](https://openfl.readthedocs.io/en/latest/source/workflow/running_the_federation.notebook.html) used for simulations, 
 bring consistency to the remaining interfaces with a high level, middle level, and low level API that are **fully interoperable**. This will result in being able to use the interface you're most comfortable with for a simulation,
@@ -58,20 +58,18 @@ This causes community fragmentation and distracts from some of the bigger proble
 
 ## Upcoming OpenFL releases
 
-### OpenFL 1.6 (Q2 2023)
+### OpenFL 1.6 (Q4 2023)
 1. Use the OpenFL Workflow Interface on distributed infrastructure with the [FederatedRuntime](https://openfl.readthedocs.io/en/latest/workflow_interface.html#runtimes-future-plans)
-2. New use cases enabled by custom workflows
+2. LLM Support
+3. New use cases enabled by custom workflows
     * Standard ML Models (i.e. Tree-based algorithms)
-3. Federated evaluation documentation and examples
-4. Well defined aggregator / collaborator interfaces intended for building higher level projects on top of OpenFL
-5. Significantly improved documentation
-6. New OpenFL Security Repo that extends OpenFL to provide governance, and end-to-end security for federated learning experiments
+4. Federated evaluation documentation and examples
+6. Significantly improved documentation
 
-### OpenFL 2.0 (2023)
+### OpenFL 2.0 (2024)
 1. Interface Cohesion
     * High level interface: Interactive API
-    * Mid level interface: Workflow API
-    * Low level interface: Redesigned TaskRunner API
+    * Low level interface: Workflow API
 2. Decoupling interfaces from infrastructure
-3. Updates to OpenFL Security 
+3. Well defined interfaces intended for building higher level projects on top of OpenFL
 

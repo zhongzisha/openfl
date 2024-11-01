@@ -4,14 +4,13 @@ import grpc
 import subprocess
 import os
 import time
-import socket
 from multiprocessing import Process
 import sys
 import importlib
 
 import openfl
 import openfl.native as fx
-
+from openfl.utilities.utils import getfqdn_env
 
 def prepare_workspace():
     subprocess.check_call(['fx', 'workspace', 'certify'])
@@ -78,7 +77,7 @@ if __name__ == '__main__':
         '--template', 'keras_cnn_mnist'
     ])
     os.chdir(prefix)
-    fqdn = socket.getfqdn()
+    fqdn = getfqdn_env()
     prepare_workspace()
     agg = start_aggregator()
     try:

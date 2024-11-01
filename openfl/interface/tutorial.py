@@ -1,14 +1,16 @@
-# Copyright (C) 2020-2023 Intel Corporation
+# Copyright 2020-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
+
+
 """Tutorial module."""
-
 from logging import getLogger
+from os import environ, sep
+from subprocess import check_call  # nosec
+from sys import executable
 
-from click import group
-from click import IntRange
-from click import option
-from click import pass_context
+from click import IntRange, group, option, pass_context
 
+from openfl.interface.cli_helper import TUTORIALS
 from openfl.utilities import click_types
 
 logger = getLogger(__name__)
@@ -17,36 +19,65 @@ logger = getLogger(__name__)
 @group()
 @pass_context
 def tutorial(context):
-    """Manage Jupyter notebooks."""
-    context.obj['group'] = 'tutorial'
+    """Manage Jupyter notebooks.
+
+    Args:
+        context (click.core.Context): Click context.
+    """
+    context.obj["group"] = "tutorial"
 
 
 @tutorial.command()
-@option('-ip', '--ip', required=False, type=click_types.IP_ADDRESS,
-        help='IP address the Jupyter Lab that should start')
-@option('-port', '--port', required=False, type=IntRange(1, 65535),
-        help='The port the Jupyter Lab server will listen on')
-def start(ip, port):
-    """Start the Jupyter Lab from the tutorials directory."""
-    from os import environ
-    from os import sep
-    from subprocess import check_call
-    from sys import executable
+@option(
+    "-ip",
+    "--ip",
+    required=False,
+    type=click_types.IP_ADDRESS,
+    help="IP address the Jupyter Lab that should start",
+)
+@option(
+    "-port",
+    "--port",
+    required=False,
+    type=IntRange(1, 65535),
+    help="The port the Jupyter Lab server will listen on",
+)
+@option(
+    "-no-browser/--browser",
+    "--no-browser/--browser",
+    default=False,
+    help="If True, the server will not use the default web browser",
+)
+def start(ip, port, no_browser):
+    """Start the Jupyter Lab from the tutorials directory.
 
-    from openfl.interface.cli_helper import TUTORIALS
+    Args:
+        ip (str): IP address the Jupyter Lab that should start.
+        port (int): The port the Jupyter Lab server will listen on.
+        no_browser (bool): If True, the server will not open the default web browser.
+    """
 
-    if 'VIRTUAL_ENV' in environ:
-        venv = environ['VIRTUAL_ENV'].split(sep)[-1]
-        check_call([
-            executable, '-m', 'ipykernel', 'install',
-            '--user', '--name', f'{venv}'
-        ], shell=False)
+    if "VIRTUAL_ENV" in environ:
+        venv = environ["VIRTUAL_ENV"].split(sep)[-1]
+        check_call(
+            [
+                executable,
+                "-m",
+                "ipykernel",
+                "install",
+                "--user",
+                "--name",
+                f"{venv}",
+            ],
+            shell=False,
+        )
 
-    jupyter_command = ['jupyter', 'lab', '--notebook-dir', f'{TUTORIALS}']
+    jupyter_command = ["jupyter", "lab", "--notebook-dir", f"{TUTORIALS}"]
 
     if ip is not None:
-        jupyter_command += ['--ip', f'{ip}']
+        jupyter_command += ["--ip", f"{ip}"]
     if port is not None:
-        jupyter_command += ['--port', f'{port}']
-
+        jupyter_command += ["--port", f"{port}"]
+    if no_browser:
+        jupyter_command += ["--no-browser"]
     check_call(jupyter_command)

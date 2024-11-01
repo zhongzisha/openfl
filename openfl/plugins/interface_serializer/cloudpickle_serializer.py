@@ -1,10 +1,12 @@
-# Copyright (C) 2020-2023 Intel Corporation
+# Copyright 2020-2024 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
+
+
 """Cloudpickle serializer plugin."""
 
 import cloudpickle
 
-from .serializer_interface import Serializer
+from openfl.plugins.interface_serializer.serializer_interface import Serializer
 
 
 class CloudpickleSerializer(Serializer):
@@ -16,12 +18,31 @@ class CloudpickleSerializer(Serializer):
 
     @staticmethod
     def serialize(object_, filename):
-        """Serialize an object and save to disk."""
-        with open(filename, 'wb') as f:
+        """
+        Serialize an object and save to disk.
+
+        Args:
+            object_ (object): The object to be serialized.
+            filename (str): The name of the file where the serialized object
+                will be saved.
+
+        Returns:
+            None
+        """
+        with open(filename, "wb") as f:
             cloudpickle.dump(object_, f)
 
     @staticmethod
     def restore_object(filename):
-        """Load and deserialize an object."""
-        with open(filename, 'rb') as f:
+        """
+        Load and deserialize an object.
+
+        Args:
+            filename (str): The name of the file where the serialized object
+                is saved.
+
+        Returns:
+            object: The deserialized object.
+        """
+        with open(filename, "rb") as f:
             return cloudpickle.load(f)

@@ -25,8 +25,6 @@ def run():
         tls=False
     )
 
-    shard_registry = federation.get_shard_registry()
-
     dummy_shard_desc = federation.get_dummy_shard_descriptor(size=10)
     dummy_shard_dataset = dummy_shard_desc.get_dataset('')
     sample, target = dummy_shard_dataset[0]
@@ -51,7 +49,7 @@ def run():
     fl_experiment.start(model_provider=MI,
                         task_keeper=task_interface,
                         data_loader=fed_dataset,
-                        rounds_to_train=2,
+                        rounds_to_train=1,
                         opt_treatment='CONTINUE_GLOBAL')
     fl_experiment.stream_metrics()
     best_model = fl_experiment.get_best_model()
@@ -124,7 +122,7 @@ class KvasirSD(DataInterface):
         train_sampler = SubsetRandomSampler(self.train_indeces)
         return DataLoader(
             self._shard_dataset,
-            num_workers=8,
+            num_workers=1,
             batch_size=self.kwargs['train_bs'],
             sampler=train_sampler
         )
@@ -136,7 +134,7 @@ class KvasirSD(DataInterface):
         val_sampler = SubsetRandomSampler(self.val_indeces)
         return DataLoader(
             self._shard_dataset,
-            num_workers=8,
+            num_workers=1,
             batch_size=self.kwargs['valid_bs'],
             sampler=val_sampler
         )
