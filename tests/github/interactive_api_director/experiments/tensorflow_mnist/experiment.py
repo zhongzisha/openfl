@@ -55,7 +55,6 @@ def run():
     @TI.register_fl_task(model='model', data_loader='train_dataset',
                          device='device', optimizer='optimizer')
     def train(model, train_dataset, optimizer, device, loss_fn=loss_fn, warmup=False):
-
         # Iterate over the batches of the dataset.
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             with tf.GradientTape() as tape:
